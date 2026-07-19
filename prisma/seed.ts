@@ -3,25 +3,72 @@ import bcrypt from "bcryptjs";
 import sharp from "sharp";
 import { mkdir } from "fs/promises";
 import path from "path";
+import { sneakerSvg, type SneakerColorway } from "./sneaker-art";
 
 const prisma = new PrismaClient();
 
 const DEMO_EMAIL = "demo@sneakershelf.app";
 const DEMO_PASSWORD = "Password123!";
 
+/** Stylized colorways for the generated seed artwork, loosely matching each model. */
+const COLORWAYS: Record<string, SneakerColorway> = {
+  chicago: {
+    upper: "#f4f4f2", overlay: "#c8102e", band: "#151515",
+    sole: "#f4f4f2", outsole: "#c8102e", laces: "#f4f4f2", collar: "#151515",
+  },
+  panda: {
+    upper: "#f5f5f3", overlay: "#1b1b1e", band: "#1b1b1e",
+    sole: "#f5f5f3", outsole: "#2a2a2e", laces: "#f5f5f3", collar: "#1b1b1e",
+  },
+  zebra: {
+    upper: "#e9e9e6", overlay: "#3a3a3a", band: "#1f1f1f",
+    sole: "#f0efe9", outsole: "#d8d5cc", laces: "#e9e9e6", collar: "#3a3a3a",
+  },
+  nb550Green: {
+    upper: "#f4f3ee", overlay: "#2e6b4f", band: "#2e6b4f",
+    sole: "#f4f3ee", outsole: "#b9b6ac", laces: "#f4f3ee", collar: "#cfcdc4",
+  },
+  kayanoCream: {
+    upper: "#ede5d4", overlay: "#26251f", band: "#8b857a",
+    sole: "#ede5d4", outsole: "#26251f", laces: "#ede5d4",
+  },
+  chuckBlack: {
+    upper: "#1d1d1f", overlay: "#2c2c2e", band: "#f5f5f2",
+    sole: "#f5f5f2", outsole: "#caa87c", laces: "#f5f5f2", collar: "#2c2c2e",
+  },
+  oldSkool: {
+    upper: "#1d1d1f", overlay: "#1d1d1f", band: "#f5f5f2",
+    sole: "#f5f5f2", outsole: "#8f6b45", laces: "#f5f5f2", collar: "#1d1d1f",
+  },
+  questionBlue: {
+    upper: "#f4f3ef", overlay: "#1f4fa3", band: "#d8d6cf",
+    sole: "#f4f3ef", outsole: "#1f4fa3", laces: "#f4f3ef", collar: "#d5d3cb",
+  },
+  suedeBlack: {
+    upper: "#232326", overlay: "#232326", band: "#f4f3ef",
+    sole: "#f4f3ef", outsole: "#232326", laces: "#f4f3ef", collar: "#3a3a3e",
+  },
+  xt6Black: {
+    upper: "#1a1a1c", overlay: "#2c2c30", band: "#3c3c42",
+    sole: "#232327", outsole: "#111113", laces: "#2c2c30", collar: "#2c2c30",
+  },
+  bondiWhite: {
+    upper: "#f6f6f4", overlay: "#e4e4e0", band: "#d6d6d0",
+    sole: "#f6f6f4", outsole: "#d0d0ca", laces: "#f6f6f4", collar: "#e4e4e0",
+  },
+  monsterBlack: {
+    upper: "#202022", overlay: "#2e2e31", band: "#45454b",
+    sole: "#2a2a2d", outsole: "#161618", laces: "#2e2e31", collar: "#2e2e31",
+  },
+};
+
 /**
- * Generates a simple synthetic sneaker-photo placeholder (colored panel with
- * brand/model text) so seed data can demonstrate "sneakers with photos"
- * without depending on any external image URL.
+ * Renders the stylized side-profile sneaker illustration for a colorway to a
+ * transparent-background webp (plus thumbnail), so seed data can demonstrate
+ * "sneakers with photos" without depending on any external image URL.
  */
-async function generateSyntheticPhoto(userId: string, label: string, color: string) {
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="900" height="900">
-      <rect width="900" height="900" fill="${color}"/>
-      <rect x="60" y="60" width="780" height="780" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="6"/>
-      <text x="450" y="470" text-anchor="middle" font-family="sans-serif" font-size="48" fill="white" font-weight="bold">${label}</text>
-    </svg>
-  `;
+async function generateSneakerPhoto(userId: string, colorway: SneakerColorway) {
+  const svg = sneakerSvg(colorway);
   const id = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const dir = path.join(process.cwd(), "public", "uploads", userId);
   await mkdir(dir, { recursive: true });
@@ -29,8 +76,8 @@ async function generateSyntheticPhoto(userId: string, label: string, color: stri
   const fullPath = path.join(dir, `${id}.webp`);
   const thumbPath = path.join(dir, `${id}_thumb.webp`);
 
-  await sharp(Buffer.from(svg)).resize(900, 900).webp({ quality: 82 }).toFile(fullPath);
-  await sharp(Buffer.from(svg)).resize(400, 400).webp({ quality: 75 }).toFile(thumbPath);
+  await sharp(Buffer.from(svg)).webp({ quality: 90 }).toFile(fullPath);
+  await sharp(Buffer.from(svg)).resize({ width: 440 }).webp({ quality: 80 }).toFile(thumbPath);
 
   return {
     fileUrl: `/uploads/${userId}/${id}.webp`,
@@ -105,7 +152,7 @@ async function main() {
     estimatedCurrentValue?: number;
     notes?: string;
     tagIds?: string[];
-    photo?: { label: string; color: string };
+    art?: SneakerColorway;
     sale?: {
       marketplace: string;
       listingDate?: Date;
@@ -144,7 +191,7 @@ async function main() {
       estimatedCurrentValue: 260,
       notes: "Purchased at retail via SNKRS raffle.",
       tagIds: [grailTag.id],
-      photo: { label: "Air Jordan 1\nChicago", color: "#b91c1c" },
+      art: COLORWAYS.chicago,
     },
     {
       brand: "Nike",
@@ -168,6 +215,7 @@ async function main() {
       shippingCost: 12,
       estimatedCurrentValue: 115,
       tagIds: [dailyTag.id],
+      art: COLORWAYS.panda,
     },
     {
       // Intentional duplicate physical pair of the Dunk Low Panda above (same style/size).
@@ -192,6 +240,7 @@ async function main() {
       shippingCost: 15,
       estimatedCurrentValue: 120,
       notes: "Backup deadstock pair — duplicate of the daily-rotation pair.",
+      art: COLORWAYS.panda,
     },
     {
       brand: "Adidas",
@@ -220,6 +269,7 @@ async function main() {
         listingUrl: "https://www.goat.com/example-listing",
         askingPrice: 235,
       },
+      art: COLORWAYS.zebra,
     },
     {
       brand: "New Balance",
@@ -240,6 +290,7 @@ async function main() {
       purchasedFrom: "Foot Locker",
       purchasePrice: 100,
       estimatedCurrentValue: 95,
+      art: COLORWAYS.nb550Green,
     },
     {
       brand: "ASICS",
@@ -260,7 +311,7 @@ async function main() {
       purchasedFrom: "ASICS.com",
       purchasePrice: 140,
       estimatedCurrentValue: 150,
-      photo: { label: "Gel-Kayano 14", color: "#0f766e" },
+      art: COLORWAYS.kayanoCream,
     },
     {
       brand: "Saucony",
@@ -302,6 +353,7 @@ async function main() {
       purchasePrice: 70,
       estimatedCurrentValue: 35,
       notes: "Daily skate shoes — heavily worn.",
+      art: COLORWAYS.chuckBlack,
     },
     {
       brand: "Vans",
@@ -322,6 +374,7 @@ async function main() {
       purchasedFrom: "Vans.com",
       purchasePrice: 60,
       estimatedCurrentValue: 55,
+      art: COLORWAYS.oldSkool,
     },
     {
       brand: "Reebok",
@@ -352,6 +405,7 @@ async function main() {
         paymentReceived: true,
         trackingNumber: "1Z999AA10123456784",
       },
+      art: COLORWAYS.questionBlue,
     },
     {
       brand: "Puma",
@@ -372,7 +426,7 @@ async function main() {
       purchasedFrom: "Puma.com",
       purchasePrice: 70,
       estimatedCurrentValue: 72,
-      photo: { label: "Suede Classic", color: "#1d4ed8" },
+      art: COLORWAYS.suedeBlack,
     },
     {
       brand: "Salomon",
@@ -394,6 +448,7 @@ async function main() {
       purchasePrice: 190,
       estimatedCurrentValue: 230,
       tagIds: [investTag.id],
+      art: COLORWAYS.xt6Black,
     },
     {
       brand: "Hoka",
@@ -414,6 +469,7 @@ async function main() {
       purchasedFrom: "Hoka.com",
       purchasePrice: 145,
       estimatedCurrentValue: 130,
+      art: COLORWAYS.bondiWhite,
     },
     {
       brand: "On",
@@ -434,6 +490,7 @@ async function main() {
       purchasedFrom: "On-running.com",
       purchasePrice: 160,
       estimatedCurrentValue: 150,
+      art: COLORWAYS.monsterBlack,
     },
   ];
 
@@ -499,8 +556,8 @@ async function main() {
       },
     });
 
-    if (item.photo) {
-      const { fileUrl, thumbnailUrl } = await generateSyntheticPhoto(user.id, item.photo.label, item.photo.color);
+    if (item.art) {
+      const { fileUrl, thumbnailUrl } = await generateSneakerPhoto(user.id, item.art);
       await prisma.sneakerPhoto.create({
         data: {
           inventoryItemId: inventoryItem.id,
