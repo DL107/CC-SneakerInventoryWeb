@@ -87,7 +87,13 @@ function applyCellFormat(cell: ExcelJS.Cell, format?: ColumnDef["format"], value
   }
 }
 
-function writeInfoBlock(sheet: ExcelJS.Worksheet, title: string, scopeLabel: string, columnCount: number) {
+function writeInfoBlock(
+  sheet: ExcelJS.Worksheet,
+  title: string,
+  scopeLabel: string,
+  columnCount: number,
+  filtersNote?: string
+) {
   sheet.mergeCells(1, 1, 1, Math.min(columnCount, 6));
   const titleCell = sheet.getCell(1, 1);
   titleCell.value = `${APP_NAME} — ${title}`;
@@ -97,6 +103,10 @@ function writeInfoBlock(sheet: ExcelJS.Worksheet, title: string, scopeLabel: str
   sheet.getCell(2, 1).font = { italic: true, color: { argb: "FF78716C" } };
   sheet.getCell(3, 1).value = scopeLabel;
   sheet.getCell(3, 1).font = { italic: true, color: { argb: "FF78716C" } };
+  if (filtersNote) {
+    sheet.getCell(4, 1).value = `Active filters: ${filtersNote}`;
+    sheet.getCell(4, 1).font = { italic: true, color: { argb: "FF78716C" } };
+  }
 }
 
 function writeTable(
@@ -145,7 +155,11 @@ function writeTable(
   sheet.views = [{ state: "frozen", ySplit: headerRow }];
 }
 
-export async function buildInventoryWorkbook(userId: string, ids?: string[]): Promise<ExcelJS.Workbook> {
+export async function buildInventoryWorkbook(
+  userId: string,
+  ids?: string[],
+  filtersNote?: string
+): Promise<ExcelJS.Workbook> {
   const items = await prisma.inventoryItem.findMany({
     where: { userId, ...(ids && ids.length > 0 ? { id: { in: ids } } : {}) },
     include: inventoryItemInclude(),
@@ -166,15 +180,15 @@ export async function buildInventoryWorkbook(userId: string, ids?: string[]): Pr
   const columns = buildColumns();
 
   const inventorySheet = workbook.addWorksheet("Inventory");
-  writeInfoBlock(inventorySheet, "Inventory Export", scopeLabel, columns.length);
+  writeInfoBlock(inventorySheet, "Inventory Export", scopeLabel, columns.length, filtersNote);
   writeTable(inventorySheet, columns, items, 5);
 
   const activeSheet = workbook.addWorksheet("Active Collection");
-  writeInfoBlock(activeSheet, "Active Collection", scopeLabel, columns.length);
+  writeInfoBlock(activeSheet, "Active Collection", scopeLabel, columns.length, filtersNote);
   writeTable(activeSheet, columns, activeItems, 5);
 
   const soldSheet = workbook.addWorksheet("Sold Sneakers");
-  writeInfoBlock(soldSheet, "Sold Sneakers", scopeLabel, columns.length);
+  writeInfoBlock(soldSheet, "Sold Sneakers", scopeLabel, columns.length, filtersNote);
   writeTable(soldSheet, columns, soldItems, 5);
 
   buildCollectionSummarySheet(workbook, items, activeItems, soldItems, scopeLabel);

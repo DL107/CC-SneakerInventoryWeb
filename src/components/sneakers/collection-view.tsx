@@ -10,7 +10,15 @@ import { GalleryCard } from "@/components/sneakers/gallery-card";
 import { InventoryTable } from "@/components/sneakers/inventory-table";
 import { FiltersPanel, DEFAULT_FILTERS, type Filters } from "@/components/sneakers/filters-panel";
 import { ExportButtons } from "@/components/sneakers/export-buttons";
-import { SORT_OPTIONS, type SortOption } from "@/lib/constants";
+import {
+  SORT_OPTIONS,
+  SIZE_CATEGORIES,
+  CONDITIONS,
+  OWNERSHIP_STATUSES,
+  AUTHENTICATION_STATUSES,
+  labelFor,
+  type SortOption,
+} from "@/lib/constants";
 import type { SneakerListItem } from "@/lib/dto";
 
 const VIEW_STORAGE_KEY = "sneaker-shelf-collection-view";
@@ -128,6 +136,26 @@ export function CollectionView({
 
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(DEFAULT_FILTERS) || search.length > 0;
 
+  const filterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (search) parts.push(`Search: "${search}"`);
+    if (filters.brand) parts.push(`Brand: ${filters.brand}`);
+    if (filters.size) parts.push(`Size: ${filters.size}`);
+    if (filters.sizeCategory) parts.push(`Size Category: ${labelFor(SIZE_CATEGORIES, filters.sizeCategory)}`);
+    if (filters.condition) parts.push(`Condition: ${labelFor(CONDITIONS, filters.condition)}`);
+    if (filters.status) parts.push(`Status: ${labelFor(OWNERSHIP_STATUSES, filters.status)}`);
+    if (filters.storageLocation) parts.push(`Storage: ${filters.storageLocation}`);
+    if (filters.purchaseYear) parts.push(`Purchase Year: ${filters.purchaseYear}`);
+    if (filters.minPrice || filters.maxPrice)
+      parts.push(`Purchase Price: ${filters.minPrice || "0"}–${filters.maxPrice || "∞"}`);
+    if (filters.minValue || filters.maxValue)
+      parts.push(`Est. Value: ${filters.minValue || "0"}–${filters.maxValue || "∞"}`);
+    if (filters.boxIncluded) parts.push(`Original Box: ${filters.boxIncluded === "yes" ? "Included" : "Not Included"}`);
+    if (filters.authenticationStatus)
+      parts.push(`Authentication: ${labelFor(AUTHENTICATION_STATUSES, filters.authenticationStatus)}`);
+    return parts.join("; ");
+  }, [search, filters]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +205,7 @@ export function CollectionView({
         <p className="text-xs text-stone-400">
           Showing {filtered.length} of {items.length} pairs
         </p>
-        <ExportButtons filteredIds={filtered.map((i) => i.id)} totalCount={items.length} />
+        <ExportButtons filteredIds={filtered.map((i) => i.id)} totalCount={items.length} filterSummary={filterSummary} />
       </div>
 
       {showFilters && (

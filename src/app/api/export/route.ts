@@ -15,8 +15,9 @@ export async function GET(request: NextRequest) {
         .map((s) => s.trim())
         .filter(Boolean)
     : undefined;
+  const filtersNote = request.nextUrl.searchParams.get("filters")?.slice(0, 500) || undefined;
 
-  const workbook = await buildInventoryWorkbook(session.userId, ids);
+  const workbook = await buildInventoryWorkbook(session.userId, ids, filtersNote);
   const buffer = await workbook.xlsx.writeBuffer();
 
   const today = new Date().toISOString().slice(0, 10);
