@@ -1,0 +1,219 @@
+// Sneaker Shelf — Prisma schema
+//
+// Using SQLite for local MVP development. SQLite has no native enum type, so
+// fields that are conceptually enums are stored as String and validated at
+// the application layer (see src/lib/constants.ts and src/lib/validation).
+// When migrating to PostgreSQL, these String fields can be promoted to
+// native Prisma enums without changing the shape of the data.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sneakerProducts  SneakerProduct[]
+  inventoryItems   InventoryItem[]
+  storageLocations StorageLocation[]
+  tags             Tag[]
+  passwordResets   PasswordResetToken[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+/// A sneaker product represents the general release (shared shape across
+/// however many physical pairs the user owns of it).
+model SneakerProduct {
+  id            String    @id @default(cuid())
+  userId        String
+  brand         String
+  name          String
+  model         String?
+  nickname      String?
+  colorway      String?
+  styleCode     String?
+  upc           String?
+  category      String?
+  collaboration String?
+  releaseDate   DateTime?
+  retailPrice   Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inventoryItems InventoryItem[]
+
+  @@index([userId])
+  @@index([userId, styleCode])
+  @@map("sneaker_products")
+}
+
+/// An inventory item represents one physical pair owned by the user.
+model InventoryItem {
+  id               String @id @default(cuid())
+  inventoryNumber  String
+  userId           String
+  sneakerProductId String
+
+  // Size information
+  size         Float
+  sizeSystem   String // US | UK | EU | CM | JP
+  sizeCategory String // MEN | WOMEN | UNISEX | GRADE_SCHOOL | PRESCHOOL | TODDLER
+  width        String?
+
+  quantity       Int     @default(1)
+  condition      String // DEADSTOCK | NEW_WITHOUT_BOX | EXCELLENT | VERY_GOOD | GOOD | FAIR | HEAVILY_WORN | DAMAGED
+  conditionScore Int?
+  status         String  @default("IN_COLLECTION")
+
+  originalBoxIncluded Boolean @default(false)
+  boxCondition        String?
+  extraLacesIncluded  Boolean @default(false)
+  accessoriesIncluded Boolean @default(false)
+  accessoriesNotes    String?
+  receiptIncluded     Boolean @default(false)
+
+  authenticationStatus   String  @default("NOT_AUTHENTICATED")
+  authenticationProvider String?
+
+  storageLocation String?
+
+  dateAdded DateTime @default(now())
+  notes     String?
+
+  // Value information (manually entered for MVP)
+  estimatedCurrentValue Float?
+  userDefinedValue      Float?
+  minAcceptableSalePrice Float?
+  valuationDate          DateTime?
+  valuationNotes         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sneakerProduct SneakerProduct  @relation(fields: [sneakerProductId], references: [id], onDelete: Cascade)
+  photos         SneakerPhoto[]
+  purchaseRecord PurchaseRecord?
+  saleRecord     SaleRecord?
+  tags           InventoryTag[]
+
+  @@unique([userId, inventoryNumber])
+  @@index([userId])
+  @@index([userId, status])
+  @@map("inventory_items")
+}
+
+model PurchaseRecord {
+  id              String    @id @default(cuid())
+  inventoryItemId String    @unique
+  purchaseDate    DateTime?
+  purchasedFrom   String?
+  orderNumber     String?
+  purchasePrice   Float?
+  salesTax        Float     @default(0)
+  shippingCost    Float     @default(0)
+  additionalFees  Float     @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_records")
+}
+
+model SaleRecord {
+  id                   String    @id @default(cuid())
+  inventoryItemId      String    @unique
+  marketplace          String?
+  listingDate          DateTime?
+  listingUrl           String?
+  askingPrice          Float?
+  saleDate             DateTime?
+  salePrice            Float?
+  marketplaceFees      Float     @default(0)
+  sellerPaidShipping   Float     @default(0)
+  otherSellingExpenses Float     @default(0)
+  buyerNotes           String?
+  paymentReceived      Boolean   @default(false)
+  trackingNumber       String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@map("sale_records")
+}
+
+model SneakerPhoto {
+  id              String   @id @default(cuid())
+  inventoryItemId String
+  fileUrl         String
+  thumbnailUrl    String?
+  category        String   @default("OTHER")
+  displayOrder    Int      @default(0)
+  isCover         Boolean  @default(false)
+  uploadedAt      DateTime @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryItemId])
+  @@map("sneaker_photos")
+}
+
+model StorageLocation {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("storage_locations")
+}
+
+model Tag {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items InventoryTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model InventoryTag {
+  inventoryItemId String
+  tagId           String
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  tag           Tag           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([inventoryItemId, tagId])
+  @@map("inventory_tags")
+}
