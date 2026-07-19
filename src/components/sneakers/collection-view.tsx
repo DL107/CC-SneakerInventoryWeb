@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { LayoutGrid, List, Search, SlidersHorizontal, PlusCircle } from "lucide-react";
+import { LayoutGrid, List, Rows3, Search, SlidersHorizontal, PlusCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { GalleryCard } from "@/components/sneakers/gallery-card";
 import { InventoryTable } from "@/components/sneakers/inventory-table";
+import { ShelfView } from "@/components/sneakers/shelf-view";
 import { FiltersPanel, DEFAULT_FILTERS, type Filters } from "@/components/sneakers/filters-panel";
 import { ExportButtons } from "@/components/sneakers/export-buttons";
 import {
@@ -102,7 +103,7 @@ export function CollectionView({
   items: SneakerListItem[];
   storageLocations: string[];
 }) {
-  const [view, setView] = useState<"gallery" | "table">("gallery");
+  const [view, setView] = useState<"shelf" | "gallery" | "table">("shelf");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sort, setSort] = useState<SortOption>("RECENTLY_ADDED");
@@ -113,10 +114,10 @@ export function CollectionView({
     // store subscription, so useSyncExternalStore would be overkill here).
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored === "gallery" || stored === "table") setView(stored);
+    if (stored === "shelf" || stored === "gallery" || stored === "table") setView(stored);
   }, []);
 
-  function changeView(v: "gallery" | "table") {
+  function changeView(v: "shelf" | "gallery" | "table") {
     setView(v);
     localStorage.setItem(VIEW_STORAGE_KEY, v);
   }
@@ -180,9 +181,18 @@ export function CollectionView({
         </Button>
         <div className="flex overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
           <button
+            onClick={() => changeView("shelf")}
+            className={`p-2 ${view === "shelf" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-500"}`}
+            aria-label="Shelf view"
+            title="Shelf view"
+          >
+            <Rows3 className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => changeView("gallery")}
             className={`p-2 ${view === "gallery" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-500"}`}
             aria-label="Gallery view"
+            title="Gallery view"
           >
             <LayoutGrid className="h-4 w-4" />
           </button>
@@ -190,6 +200,7 @@ export function CollectionView({
             onClick={() => changeView("table")}
             className={`p-2 ${view === "table" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-500"}`}
             aria-label="Table view"
+            title="Table view"
           >
             <List className="h-4 w-4" />
           </button>
@@ -237,7 +248,9 @@ export function CollectionView({
           </Button>
         </div>
       ) : filtered.length > 0 ? (
-        view === "gallery" ? (
+        view === "shelf" ? (
+          <ShelfView items={filtered} />
+        ) : view === "gallery" ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {filtered.map((item) => (
               <GalleryCard key={item.id} item={item} />
