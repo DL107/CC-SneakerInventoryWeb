@@ -37,9 +37,9 @@ export function ShelfView({ items }: { items: SneakerListItem[] }) {
               />
             </div>
 
-            {/* Floating white shelf segment — joins with neighbors into one
-                continuous shelf; visible mostly through its edge + cast shadow */}
-            <div className="h-[13px] w-full border-y border-stone-200/80 bg-gradient-to-b from-white to-stone-100 shadow-[0_12px_16px_-8px_rgba(0,0,0,0.25)] dark:border-stone-700 dark:from-stone-700 dark:to-stone-800 dark:shadow-[0_12px_16px_-8px_rgba(0,0,0,0.8)]" />
+            {/* Wooden shelf plank segment — joins with neighbors into one
+                continuous shelf per visual row */}
+            <div className="h-[14px] w-full bg-gradient-to-b from-[#e3cba4] via-[#d3b184] to-[#b98f5d] shadow-[0_12px_16px_-8px_rgba(93,64,28,0.4)] dark:from-[#4a4238] dark:via-[#3d362e] dark:to-[#2e2822] dark:shadow-[0_12px_16px_-8px_rgba(0,0,0,0.8)]" />
 
             <div className="flex h-16 flex-col items-center justify-center gap-0.5 px-3 pb-2 pt-2 text-center">
               <p className="w-full truncate text-xs font-semibold text-stone-800 transition-colors group-hover:text-stone-950 dark:text-stone-200 dark:group-hover:text-white">
