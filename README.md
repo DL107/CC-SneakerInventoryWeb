@@ -22,11 +22,11 @@ This is the first MVP. It intentionally does **not** include AI scanning, barcod
 
 ```bash
 npm install
-cp .env.example .env        # then edit SESSION_SECRET if you like
-npx prisma migrate dev      # creates prisma/dev.db and applies the schema
-npm run db:seed             # loads 14 demo sneakers into a demo account
+npm run setup    # creates .env, builds the SQLite DB, seeds 14 demo sneakers
 npm run dev
 ```
+
+(`npm run setup` is idempotent — it never overwrites an existing `.env`, and re-running it just re-applies migrations and refreshes the seed data. The manual equivalent is `cp .env.example .env && npx prisma migrate deploy && npm run db:seed`.)
 
 Open http://localhost:3000. Sign in with the seeded demo account:
 

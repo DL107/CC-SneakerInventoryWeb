@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "setup": "node scripts/setup.mjs",
     "db:seed": "prisma db seed"
   },
   "prisma": {
